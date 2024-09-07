@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        GIT_REPO = 'https://github.com/yourusername/your-frontend-repo.git'
+        GIT_REPO = 'https://github.com/fortis-07/html5-boilerplate-jenkins.git'
         NODE_VERSION = '14.17.0'
     }
 
