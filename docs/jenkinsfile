@@ -1,90 +1,39 @@
 pipeline {
     agent any
-
+    
     environment {
-        GIT_REPO = 'https://github.com/fortis-07/html5-boilerplate-jenkins.git'
-        NODE_VERSION = '14.17.0'
+      VERSION = '0.1.0'
+      RELEASE_VERSION = 'R.2'
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: "${GIT_REPO}"
-            }
+      stage('Audit tools') {
+        steps {
+          sh '''
+              git version
+              java -version
+              mvn -version
+          '''
         }
+      }
 
-        stage('Install Dependencies') {
-            steps {
-                nodejs(nodeJSInstallationName: 'Node ' + NODE_VERSION) {
-                    sh 'npm install'
-                }
-            }
+      stage('Unit Test') {
+        steps {
+          dir('./java-tomcat-sample') {
+            sh '''
+              echo "Executing Unit Tests..."
+              mvn test
+          '''
+          }
         }
+      }
 
-        stage('Lint HTML') {
-            steps {
-                nodejs(nodeJSInstallationName: 'Node ' + NODE_VERSION) {
-                    sh 'npm run lint:html'
-                }
-            }
+      stage('Build') {
+        steps {
+          echo "Building version: ${VERSION} with suffix: ${RELEASE_VERSION}"
+          echo 'Mention your Application Build Code here!!!'
+          sh 'mvn -f java-tomcat-sample/pom.xml clean package'
         }
-
-        stage('Lint CSS') {
-            steps {
-                nodejs(nodeJSInstallationName: 'Node ' + NODE_VERSION) {
-                    sh 'npm run lint:css'
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                nodejs(nodeJSInstallationName: 'Node ' + NODE_VERSION) {
-                    sh 'npm test'
-                }
-            }
-        }
-
-        stage('Build') {
-            steps {
-                nodejs(nodeJSInstallationName: 'Node ' + NODE_VERSION) {
-                    sh 'npm run build'
-                }
-            }
-        }
-
-        stage('Deploy to Staging') {
-            when {
-                branch 'develop'
-            }
-            steps {
-                sh 'rsync -avz --delete dist/ user@staging-server:/path/to/staging/directory/'
-            }
-        }
-
-        stage('Deploy to Production') {
-            when {
-                branch 'main'
-            }
-            steps {
-                input message: 'Deploy to production?', ok: 'Yes'
-                sh 'rsync -avz --delete dist/ user@production-server:/path/to/production/directory/'
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-            slackSend(color: '#36a64f', message: "Frontend build and deployment successful! Check it out at https://your-website.com")
-        }
-        failure {
-            echo 'Pipeline failed. Please check the logs for details.'
-            slackSend(color: '#ff0000', message: "Frontend build or deployment failed. Check Jenkins for details: ${env.BUILD_URL}")
-        }
-        always {
-            archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
-            junit 'test-results/**/*.xml'
-        }
+      }
     }
 }
